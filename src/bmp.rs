@@ -476,7 +476,7 @@ impl BmpDevice
     {
         match dfu_dev.download(firmware, length) {
             Ok(_) => if dfu_dev.will_detach() {
-            match dfu_dev.detach() {
+                match dfu_dev.detach() {
                     Err(source) => Err(ErrorKind::DeviceReboot.error_from(source)),
                     _ => Ok(()),
                 }
