@@ -1,0 +1,27 @@
+[package]
+name = "dfu-libusb"
+version = "0.5.1"
+authors = ["Cecile Tonglet <cecile.tonglet@cecton.com>"]
+edition = "2018"
+license = "MIT OR Apache-2.0"
+description = "Implementation of DFU using libusb and dfu-core"
+repository = "https://github.com/dfu-rs/dfu-libusb"
+homepage = "https://github.com/dfu-rs/dfu-libusb"
+documentation = "https://docs.rs/dfu-libusb"
+readme = "README.md"
+keywords = ["dfu", "libusb"]
+
+[features]
+backtrace = [ "anyhow/backtrace" ]
+
+[dependencies]
+anyhow = "1.0"
+dfu-core = { version = "0.6", features = ["std"] }
+libusb1-sys = "0.6"
+rusb = { path = "../rusb", version = "0.9" }
+thiserror = "1"
+
+[dev-dependencies]
+indicatif = "0.16"
+simplelog = "0.12"
+clap = { version = "3.2", features = ["derive"] }
