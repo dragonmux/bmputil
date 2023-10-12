@@ -234,7 +234,7 @@ impl BmpDevice
     {
         let configuration = match self.device().active_config_descriptor() {
             Ok(d) => d,
-            Err(rusb::Error::NotFound) => {
+            Err(rusb::Error { kind: rusb::ErrorKind::NotFound, .. }) => {
                 // In the unlikely even that the OS reports the device as unconfigured
                 // (possibly because it was only just connected and is still enumerating?)
                 // try instead to simply get the first configuration, and hope that the
@@ -344,7 +344,7 @@ impl BmpDevice
 
         match self._handle_mut().release_interface(iface_number) {
             // Ignore if the device has already disconnected.
-            Err(rusb::Error::NoDevice) => Ok(()),
+            Err(rusb::Error { kind: rusb::ErrorKind::NoDevice, .. }) => Ok(()),
             other => other,
         }?;
 
@@ -380,7 +380,7 @@ impl BmpDevice
 
         match self._handle_mut().release_interface(iface_number) {
             // Ignore if the device has already disconnected.
-            Err(rusb::Error::NoDevice) => Ok(()),
+            Err(rusb::Error { kind: rusb::ErrorKind::NoDevice, .. }) => Ok(()),
             other => other,
         }?;
 
@@ -422,7 +422,9 @@ impl BmpDevice
             // (which becomes LIBUSB_ERROR_PIPE) when a control request results in a device disconnect.
             use crate::ErrorSource::Libusb;
             let res = unsafe { self.request_detach() };
-            if let Err(e @ Error { kind: ErrorKind::External(Libusb(rusb::Error::Pipe)), .. }) = res {
+            if let Err(e @ Error {
+                kind: ErrorKind::External(Libusb(rusb::Error { kind: rusb::ErrorKind::Pipe, .. })), ..
+            }) = res {
                 warn!("Possibly spurious error from Windows when attempting to detach: {}", e);
             } else {
                 res?;
@@ -459,7 +461,9 @@ impl BmpDevice
             // (which becomes LIBUSB_ERROR_PIPE) when a control request results in a device disconnect.
             use crate::ErrorSource::Libusb;
             let res = unsafe { self.request_detach() };
-            if let Err(e @ Error { kind: ErrorKind::External(Libusb(rusb::Error::Pipe)), .. }) = res {
+            if let Err(e @ Error {
+                kind: ErrorKind::External(Libusb(rusb::Error { kind: rusb::ErrorKind::Pipe, .. })), ..
+            }) = res {
                 warn!("Possibly spurious error from Windows when attempting to detach: {}", e);
             } else {
                 res?;
@@ -486,7 +490,7 @@ impl BmpDevice
                 Ok(())
             },
             Err(source) => Err(match source {
-                dfu_libusb::Error::LibUsb(rusb::Error::NoDevice) => {
+                dfu_libusb::Error::LibUsb(rusb::Error { kind: rusb::ErrorKind::NoDevice, .. }) => {
                     error!("Black Magic Probe device disconnected during the flash process!");
                     warn!(
                         "If the device now fails to enumerate, try holding down the button while plugging the device in order to enter the bootloader."

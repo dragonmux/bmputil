@@ -191,7 +191,13 @@ impl Error
     #[allow(dead_code)]
     fn backtrace(&self) -> Option<&Backtrace>
     {
-        Some(&self.backtrace)
+        if let ErrorKind::External(ErrorSource::Libusb(err)) = &self.kind {
+            Some(&err.backtrace)
+        } else if let ErrorKind::External(ErrorSource::DfuLibusb(dfu_libusb::Error::LibUsb(err))) = &self.kind {
+            Some(&err.backtrace)
+        } else {
+            Some(&self.backtrace)
+        }
     }
 }
 
@@ -207,8 +213,11 @@ impl Display for Error
 
         #[cfg(feature = "backtrace")]
         {
-            if self.backtrace.status() == BacktraceStatus::Captured {
-                write!(f, "\nBacktrace:\n{}", self.backtrace)?;
+            let backtrace = self.backtrace();
+            if let Some(backtrace) = backtrace {
+                if backtrace.status() == BacktraceStatus::Captured {
+                    write!(f, "\nBacktrace:\n{}", backtrace)?;
+                }
             }
         }
 
@@ -234,7 +243,8 @@ impl From<rusb::Error> for Error
     {
         use ErrorKind::*;
         match other {
-            rusb::Error::NoDevice => DeviceNotFound.error_from(other),
+            rusb::Error { kind: rusb::ErrorKind::NoDevice, .. } =>
+                DeviceNotFound.error_from(other),
             other => External(ErrorSource::Libusb(other)).error()
         }
     }
@@ -248,7 +258,7 @@ impl From<dfu_libusb::Error> for Error
         use dfu_libusb::Error as Source;
         match other {
             Source::LibUsb(source) => {
-                External(ErrorSource::Libusb(source)).error_from(other)
+                External(ErrorSource::Libusb(source)).error()
             },
             Source::MissingLanguage => {
                 DeviceSeemsInvalid(S!("no string descriptor languages"))
