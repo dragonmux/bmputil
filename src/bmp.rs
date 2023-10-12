@@ -396,16 +396,10 @@ impl BmpDevice
     pub unsafe fn request_detach(&mut self) -> Result<(), Error>
     {
         use DfuOperatingMode::*;
-        let res = match self.mode {
+        return match self.mode {
             Runtime => self.enter_dfu_mode(),
             FirmwareUpgrade => self.leave_dfu_mode(),
         };
-        match res {
-            Ok(()) => (),
-            Err(e) => return Err(e),
-        };
-
-        Ok(())
     }
 
     /// Requests the Black Magic Probe to detach, and re-initializes this struct with the new
