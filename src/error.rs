@@ -189,14 +189,31 @@ impl Error
 
     #[cfg(feature = "backtrace")]
     #[allow(dead_code)]
-    fn backtrace(&self) -> Option<&Backtrace>
+    fn inner_backtrace(&self) -> Option<&Backtrace>
     {
-        if let ErrorKind::External(ErrorSource::Libusb(err)) = &self.kind {
-            Some(&err.backtrace)
-        } else if let ErrorKind::External(ErrorSource::DfuLibusb(dfu_libusb::Error::LibUsb(err))) = &self.kind {
-            Some(&err.backtrace)
-        } else {
-            Some(&self.backtrace)
+        let backtrace = match &self.kind {
+            ErrorKind::External(ErrorSource::Libusb(err)) => Some(&err.backtrace),
+            ErrorKind::External(ErrorSource::DfuLibusb(dfu_libusb::Error::LibUsb(err))) => Some(&err.backtrace),
+            _ => None
+        };
+        match backtrace {
+            Some(backtrace) => {
+                match backtrace.status() {
+                    BacktraceStatus::Captured => Some(&backtrace),
+                    _ => None,
+                }
+            },
+            None => None
+        }
+    }
+
+    #[cfg(feature = "backtrace")]
+    #[allow(dead_code)]
+    fn outer_backtrace(&self) -> Option<&Backtrace>
+    {
+        match self.backtrace.status() {
+            BacktraceStatus::Captured  => Some(&self.backtrace),
+            _ => None,
         }
     }
 }
@@ -213,16 +230,24 @@ impl Display for Error
 
         #[cfg(feature = "backtrace")]
         {
-            let backtrace = self.backtrace();
+            let backtrace = self.inner_backtrace();
             if let Some(backtrace) = backtrace {
-                if backtrace.status() == BacktraceStatus::Captured {
-                    write!(f, "\nBacktrace:\n{}", backtrace)?;
-                }
+                write!(f, "\nInner Backtrace:\n{}", backtrace)?;
+            }
+
+            let backtrace = self.outer_backtrace();
+            if let Some(backtrace) = backtrace {
+                write!(f, "\nOuter Backtrace:\n{}", backtrace)?;
             }
         }
 
         if let Some(source) = &self.source {
             writeln!(f, "\nCaused by: {}", source)?;
+            if let Some(error) = source.downcast_ref::<dfu_libusb::Error>() {
+                if let dfu_libusb::Error::LibUsb(error) = error {
+                    write!(f, "\nrusb Backtrace:\n{}", error.backtrace)?;
+                }
+            }
         }
 
         Ok(())
