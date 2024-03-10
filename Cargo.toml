@@ -21,7 +21,7 @@ members = ["rusb", "dfu-libusb"]
 
 [dependencies]
 anstyle = "1.0.2"
-clap = { version = "4.0", default-features = false, features = ["std", "color", "help", "usage", "unicode", "wrap_help", "unstable-styles", "cargo"] }
+clap = { version = "4.4.0", default-features = false, features = ["std", "color", "help", "usage", "unicode", "wrap_help", "unstable-styles", "cargo"] }
 env_logger = "0.10"
 dfu-core = { version = "0.6.0", features = ["std"] }
 dfu-libusb = { path = "dfu-libusb", version = "0.5.1" }
