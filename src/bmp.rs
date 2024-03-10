@@ -365,16 +365,24 @@ impl BmpDevice
         );
         let timeout_ms = func_desc.wDetachTimeOut;
 
-        let _response = self.handle().write_control(
+        // Try and issue DFU_DETACH to the probe
+        if let Err(error) = self.handle().write_control(
             request_type, // bmpRequestType
             DfuRequest::Detach as u8, // bRequest
             timeout_ms, // wValue
             iface_number as u16, // wIndex
             &[], // buffer
             Duration::from_secs(1), // timeout for libusb
-        )
-        .map_err(Error::from)
-        .map_err(|e| e.with_ctx("sending control request"))?;
+        ) {
+            // If that fails, try to figure out why and if we care
+            match error.kind {
+                // If libusb gave us a pipe error while processing the request,
+                // warn and turn it harmless.
+                rusb::ErrorKind::Io => warn!("Ignoring spurious error from DFU_DETACH"),
+                // Otherwise translate the error to a bmputil error
+                _ => return Err(Error::from(error).with_ctx("sending control request")),
+            }
+        }
 
         info!("DFU_DETACH request completed. Device should now re-enumerate into DFU mode.");
 
